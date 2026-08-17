@@ -610,10 +610,14 @@ function duplicateQuotationData(q, settings){
 // Renders the actual VSS Digital logo image where available, and quietly
 // falls back to the brand gradient mark if the logo files haven't been
 // placed alongside index.html (so the app never breaks if they're missing).
-function BrandLogo({ className, imgClassName, fallbackClassName }){
+function BrandLogo({ className, imgClassName, fallbackClassName, size }){
   const [failed, setFailed] = useState(false);
+  // Explicit pixel size passed as inline style, not just a Tailwind class —
+  // guarantees the mark can never render at its native (huge) image
+  // dimensions even if a utility class fails to apply.
+  const boxStyle = size ? { height: size, width: size, flexShrink: 0 } : undefined;
   if(failed){
-    return <div className={fallbackClassName || "w-8 h-8 rounded-lg grad-brand flex-shrink-0"} />;
+    return <div className={fallbackClassName || "w-8 h-8 rounded-lg grad-brand flex-shrink-0"} style={boxStyle} />;
   }
   return (
     <img
@@ -624,6 +628,7 @@ function BrandLogo({ className, imgClassName, fallbackClassName }){
       }}
       alt="VSS Digital"
       className={imgClassName || (className || "h-8 w-auto object-contain flex-shrink-0")}
+      style={{ ...boxStyle, objectFit:'contain' }}
     />
   );
 }
@@ -809,7 +814,7 @@ function LoginGate(){
   return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--paper)'}}>
       <form onSubmit={handleSubmit} style={{width:360,background:'var(--panel)',border:'1px solid var(--line)',borderRadius:10,padding:32}}>
-        <BrandLogo imgClassName="h-10 w-auto object-contain mb-4" fallbackClassName="w-10 h-10 rounded-lg grad-brand mb-4" />
+        <BrandLogo size="40px" imgClassName="rounded-lg mb-4" fallbackClassName="rounded-lg grad-brand mb-4" />
         <div className="font-display font-bold text-xl mb-1">VSS Digital</div>
         <div className="text-sm mb-6" style={{color:'var(--muted)'}}>{mode==='login' ? 'Sign in to Quotation Manager' : 'Create a new account'}</div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{color:'var(--muted)'}}>Email</label>
@@ -1375,7 +1380,7 @@ function PreviewStep({ q, settings, onDownloadPdf }){
       <div className="border border-[var(--line)] rounded-lg p-6 bg-white print-area">
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-3">
-            <BrandLogo imgClassName="h-10 w-auto object-contain" fallbackClassName="w-10 h-10 rounded-lg grad-brand flex-shrink-0" />
+            <BrandLogo size="40px" imgClassName="rounded-lg flex-shrink-0" fallbackClassName="rounded-lg grad-brand flex-shrink-0" />
             <div>
               <div className="font-display font-bold text-xl">{settings.companyName}</div>
               <div className="text-sm text-[var(--muted)]">{settings.tagline}</div>
@@ -1810,8 +1815,8 @@ function Sidebar({ view, setView, onNew, onLogout, user }){
   ];
   return (
     <div className="w-44 flex-shrink-0 text-white flex flex-col h-screen sticky top-0 no-print" style={{background:'linear-gradient(180deg, var(--brand-900) 0%, var(--brand-600) 100%)'}}>
-      <div className="p-2 flex items-center gap-1.5 border-b border-white/15">
-        <BrandLogo imgClassName="h-5 w-auto object-contain flex-shrink-0" fallbackClassName="w-5 h-5 rounded grad-brand flex-shrink-0" />
+      <div className="p-2 flex items-center gap-1.5 border-b border-white/15" style={{height:'40px', overflow:'hidden'}}>
+        <BrandLogo size="22px" imgClassName="rounded flex-shrink-0" fallbackClassName="rounded grad-brand flex-shrink-0" />
         <div className="min-w-0">
           <div className="font-display font-bold text-xs leading-tight truncate text-white">VSS Digital</div>
           <div className="text-[8px] text-white/60 leading-tight truncate">Quotation Manager</div>
