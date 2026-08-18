@@ -1238,16 +1238,19 @@ function buildPdf(q, settings, logo){
   });
   y = doc.lastAutoTable.finalY + 14;
 
-  // Totals - aligned with table right edge, improved layout
+  // Totals - aligned with table right edge, proper PDF positioning
   const totals = calcTotals(q);
-  const totalsBoxW = 210;
+  const totalsBoxW = 200;
   const totalsX = pageW - margin - totalsBoxW;
+  const labelMaxW = 100;  // Max width for labels
   
-  // Better spacing with proper alignment
+  // Proper line rendering with fixed positions
   const line = (label, value, bold) => {
     doc.setFont('helvetica', bold?'bold':'normal'); doc.setFontSize(9.5);
-    doc.text(label, totalsX, y, { align:'left' });
-    doc.text(value, pageW - margin - 5, y, { align:'right' });
+    // Label: left-aligned within label area
+    doc.text(label, totalsX + 8, y, { align:'left', maxWidth: labelMaxW });
+    // Value: right-aligned to the totals box right edge
+    doc.text(value, pageW - margin - 8, y, { align:'right' });
     y += 14;
   };
   
@@ -1265,20 +1268,20 @@ function buildPdf(q, settings, logo){
     line('Tax', 'Not Applicable');
   }
 
-  // GRAND TOTAL — rendered as a solid, high-contrast banner with improved spacing
+  // GRAND TOTAL — rendered as a solid, high-contrast banner
   if(y > 700){ doc.addPage(); y = 50; }
-  y += 2; // Spacing before grand total box
-  const gtBoxX = totalsX - 5;
-  const gtBoxW = totalsBoxW + 10;
+  y += 3; // Spacing before grand total box
+  const gtBoxX = totalsX;
+  const gtBoxW = totalsBoxW;
   const gtBoxH = 26;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
-  doc.roundedRect(gtBoxX, y - 4, gtBoxW, gtBoxH, 3, 3, 'F');
+  doc.roundedRect(gtBoxX, y - 2, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(12);
   doc.text('GRAND TOTAL', gtBoxX + 10, y + 13);
   doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 8, y + 13, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  y += gtBoxH + 14;
+  y += gtBoxH + 12;
 
   const addTextBlock = (title, text) => {
     if(!text) return;
