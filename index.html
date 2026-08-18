@@ -1238,25 +1238,26 @@ function buildPdf(q, settings, logo){
   });
   y = doc.lastAutoTable.finalY + 14;
 
-  // Totals section - fixed positioning for precise PDF alignment
+  // Totals section - proper column-based layout
   const totals = calcTotals(q);
-  const totalsRightX = pageW - margin;        // Right edge position
-  const totalsLabelX = pageW - margin - 150;  // Fixed label start
-  const totalsValueX = pageW - margin - 45;   // Fixed value position for right-alignment
   
-  // Line renderer with fixed X positions to prevent PDF misalignment
+  // Create two clear columns: label column (left) and value column (right)
+  const totalsLabelCol = pageW - margin - 180;  // Labels start here
+  const totalsValueCol = pageW - margin - 65;   // Values end here (right-aligned)
+  
+  // Line renderer with proper column positioning
   const line = (label, value, bold) => {
     doc.setFont('helvetica', bold?'bold':'normal'); doc.setFontSize(9.5);
     doc.setTextColor(INK[0],INK[1],INK[2]);
-    // Label at fixed position, left-aligned
-    doc.text(label, totalsLabelX, y);
-    // Value at fixed position, right-aligned (will align to the right edge)
-    doc.text(value, totalsValueX, y, { align:'right' });
+    // Label in left column
+    doc.text(label, totalsLabelCol, y, { align:'left', maxWidth: 110 });
+    // Value in right column, right-aligned
+    doc.text(value, totalsValueCol, y, { align:'right' });
     y += 14;
   };
   
   if(y > 660){ doc.addPage(); y = 50; }
-  y += 6; // Padding before totals
+  y += 8; // Padding before totals
   line('Subtotal', formatMoneyPdf(totals.subtotal, q.currency));
   if(Number(q.overallDiscountPct)>0) line(`Overall Discount (${q.overallDiscountPct}%)`, '- '+formatMoneyPdf(totals.overallDiscount, q.currency));
   line('Taxable Amount', formatMoneyPdf(totals.taxable, q.currency));
@@ -1269,18 +1270,18 @@ function buildPdf(q, settings, logo){
     line('Tax', 'Not Applicable');
   }
 
-  // GRAND TOTAL banner
-  if(y > 700){ doc.addPage(); y = 50; }
-  y += 6; // Spacing before grand total
-  const gtBoxX = totalsLabelX - 5;
-  const gtBoxW = 160;
-  const gtBoxH = 24;
+  // GRAND TOTAL banner - properly sized and positioned
+  if(y > 705){ doc.addPage(); y = 50; }
+  y += 8; // Spacing before grand total
+  const gtBoxX = totalsLabelCol - 8;
+  const gtBoxW = 180;
+  const gtBoxH = 22;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
-  doc.roundedRect(gtBoxX, y - 2, gtBoxW, gtBoxH, 3, 3, 'F');
+  doc.roundedRect(gtBoxX, y - 1, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('GRAND TOTAL', gtBoxX + 8, y + 11);
-  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), totalsValueX, y + 11, { align:'right' });
+  doc.text('GRAND TOTAL', gtBoxX + 10, y + 10);
+  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), totalsValueCol, y + 10, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
   y += gtBoxH + 14;
 
@@ -1318,108 +1319,96 @@ function buildPdf(q, settings, logo){
   addTextBlock('TERMS & CONDITIONS', q.terms.termsAndConditions);
 
   // ACCEPTANCE STATEMENT
-  if(y + 40 > 740){ doc.addPage(); y = 50; }
+  if(y + 50 > 745){ doc.addPage(); y = 50; }
+  
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
   doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
   doc.text('ACCEPTANCE', margin, y);
   doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.setLineWidth(1);
-  doc.line(margin, y+3, margin+50, y+3);
-  doc.setLineWidth(0.5);
-  y += 14;
+  doc.setLineWidth(0.8);
+  doc.line(margin, y+3, margin+48, y+3);
+  y += 12;
 
+  // Checkbox
   doc.setDrawColor(140,82,255);
-  doc.rect(margin, y-4, 6, 6);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, y-3, 5, 5);
   doc.setTextColor(INK[0],INK[1],INK[2]);
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text('I accept this quotation and the associated terms and conditions.', margin+12, y);
-  y += 18;
+  doc.text('I accept this quotation and the associated terms and conditions.', margin+10, y);
+  y += 16;
 
-  // SIGNATURE BLOCK - Professional, clean design
-  const sigBoxY = y;
-  const sigBoxH = 94;
-  if(sigBoxY + sigBoxH > 750){ doc.addPage(); y = 50; }
+  // SIGNATURE SECTION - Clean two-column layout
+  const sigStartY = y;
+  const sigBoxH = 80;
   
-  // No background box - cleaner modern look
-  // Just top border line
+  if(sigStartY + sigBoxH > 750){ doc.addPage(); y = 50; }
+  
+  // Top border line for signature section
   doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
   doc.setLineWidth(0.8);
-  doc.line(margin, sigBoxY, pageW - margin, sigBoxY);
+  doc.line(margin, y, pageW - margin, y);
+  y += 10;
   
-  // Column dimensions
-  const sigColW = (pageW - 2*margin - 1) / 2;  // Divide page into 2 columns with thin divider
-  const dividerX = margin + sigColW + 0.5;
+  // Column setup
+  const colWidth = (pageW - 2*margin) / 2;
+  const col1X = margin;
+  const col2X = margin + colWidth + 1;
   
   // LEFT COLUMN: PREPARED BY
-  const prepX = margin + 8;
   const preparedBy = q.preparedBy || {};
-  const prepName = (preparedBy.name || settings.preparedByName || 'info@vssdigital.com').split('\n')[0];
+  const prepName = (preparedBy.name || settings.preparedByName || '').trim();
+  const prepDesignation = (preparedBy.designation || settings.preparedByDesignation || '').trim();
+  const prepEmail = (preparedBy.email || settings.preparedByEmail || '').trim();
   
-  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.text('PREPARED BY', prepX, sigBoxY + 10);
+  doc.text('PREPARED BY', col1X + 8, y);
   
-  // Prepared By details
+  y += 12;
   doc.setFont('helvetica','bold'); doc.setFontSize(9);
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  doc.text(prepName, prepX, sigBoxY + 24);
+  if(prepName) doc.text(prepName, col1X + 8, y);
   
-  let prepDetailY = sigBoxY + 24;
-  if(preparedBy.designation || settings.preparedByDesignation){
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-    doc.setTextColor(107,107,128);
-    doc.text(preparedBy.designation || settings.preparedByDesignation, prepX, sigBoxY + 32);
-    prepDetailY = sigBoxY + 32;
-  }
-  
-  if(preparedBy.email || settings.preparedByEmail){
-    doc.setFont('helvetica','normal'); doc.setFontSize(7);
-    doc.setTextColor(107,107,128);
-    doc.text(preparedBy.email || settings.preparedByEmail, prepX, sigBoxY + 39);
-    prepDetailY = sigBoxY + 39;
-  }
-  
-  // Signature line
-  const prepSigLineY = prepDetailY + 14;
-  doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.setLineWidth(0.8);
-  doc.line(prepX, prepSigLineY, prepX + sigColW - 16, prepSigLineY);
-  
+  y += 8;
   doc.setFont('helvetica','normal'); doc.setFontSize(7);
   doc.setTextColor(107,107,128);
-  doc.text('Signature', prepX, prepSigLineY + 7);
+  if(prepDesignation) doc.text(prepDesignation, col1X + 8, y);
+  y += 6;
+  if(prepEmail) doc.text(prepEmail, col1X + 8, y);
+  
+  y = sigStartY + 42;
+  doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
+  doc.setLineWidth(0.8);
+  doc.line(col1X + 8, y, col1X + colWidth - 8, y);
+  
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
+  doc.setTextColor(107,107,128);
+  doc.text('Authorized Signature & Date', col1X + 8, y + 6);
   
   // RIGHT COLUMN: ACCEPTED BY
-  const acceptX = dividerX + 8;
-  
-  // Vertical divider
-  doc.setDrawColor(BRAND_400[0],BRAND_400[1],BRAND_400[2]);
-  doc.setLineWidth(0.5);
-  doc.line(dividerX, sigBoxY + 2, dividerX, sigBoxY + sigBoxH - 2);
-  
-  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  y = sigStartY + 10;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.text('ACCEPTED BY', acceptX, sigBoxY + 10);
+  doc.text('ACCEPTED BY', col2X + 8, y);
   
-  // Accepted By fields
-  const acceptLines = [
-    { label: 'Name', y: sigBoxY + 24 },
-    { label: 'Designation', y: sigBoxY + 37 },
-    { label: 'Signature', y: sigBoxY + 50 },
-    { label: 'Date', y: sigBoxY + 63 }
-  ];
+  // Acceptance fields with clear spacing
+  const fieldLabels = ['Name', 'Designation', 'Signature & Date'];
+  let fieldY = y + 12;
   
-  acceptLines.forEach(item => {
+  fieldLabels.forEach((label, index) => {
     doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
     doc.setLineWidth(0.8);
-    doc.line(acceptX, item.y, acceptX + sigColW - 16, item.y);
+    doc.line(col2X + 8, fieldY, col2X + colWidth - 8, fieldY);
     
-    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
     doc.setTextColor(107,107,128);
-    doc.text(item.label, acceptX, item.y + 7);
+    doc.text(label, col2X + 8, fieldY + 6);
+    
+    fieldY += 12;
   });
   
-  y = sigBoxY + sigBoxH + 8;
+  y = sigStartY + sigBoxH + 6;
 
   doc.setTextColor(INK[0],INK[1],INK[2]);
 
