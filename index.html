@@ -1215,7 +1215,7 @@ function buildPdf(q, settings, logo){
       formatMoneyPdf(amt.net, q.currency)
     ];
   });
-  // Explicit column widths (sum ≈ usable page width) so numbers always have
+  // Explicit column widths (sum = usable page width) so numbers always have
   // enough room and never wrap/break onto multiple lines.
   const tableW = pageW - 2*margin;
   doc.autoTable({
@@ -1223,29 +1223,30 @@ function buildPdf(q, settings, logo){
     head: [['Service','Billing','Qty / Unit','Unit Price','Discount','Amount']],
     body: rows,
     margin: { left: margin, right: margin },
-    tableWidth: tableW,
-    styles: { font:'helvetica', fontSize: 8.5, cellPadding: 6, valign:'top', overflow:'linebreak' },
-    headStyles: { fillColor: BRAND_900, textColor:255, fontStyle:'bold' },
+    tableWidth: 'auto',
+    styles: { font:'helvetica', fontSize: 9, cellPadding: 7, valign:'middle', overflow:'linebreak', halign:'left' },
+    headStyles: { fillColor: BRAND_900, textColor:255, fontStyle:'bold', halign:'center' },
     columnStyles: {
-      0:{ cellWidth: 150 },
-      1:{ cellWidth: 70 },
-      2:{ cellWidth: 55, halign:'center' },
-      3:{ cellWidth: 75, halign:'right' },
-      4:{ cellWidth: 55, halign:'right' },
-      5:{ cellWidth: 90, halign:'right' }
+      0:{ cellWidth: 120, halign:'left' },
+      1:{ cellWidth: 60, halign:'center' },
+      2:{ cellWidth: 50, halign:'center' },
+      3:{ cellWidth: 70, halign:'right' },
+      4:{ cellWidth: 50, halign:'right' },
+      5:{ cellWidth: 85, halign:'right', fontStyle:'bold' }
     },
     alternateRowStyles: { fillColor:[247,244,252] }
   });
-  y = doc.lastAutoTable.finalY + 16;
+  y = doc.lastAutoTable.finalY + 14;
 
-  // Totals
+  // Totals - aligned with table right edge
   const totals = calcTotals(q);
-  const totalsX = pageW - margin - 220;
+  const totalsBoxW = 180;
+  const totalsX = pageW - margin - totalsBoxW;
   const line = (label, value, bold) => {
     doc.setFont('helvetica', bold?'bold':'normal'); doc.setFontSize(9.5);
-    doc.text(label, totalsX, y);
-    doc.text(value, pageW-margin, y, { align:'right' });
-    y += 15;
+    doc.text(label, totalsX + 10, y);
+    doc.text(value, pageW - margin - 10, y, { align:'right' });
+    y += 13;
   };
   if(y > 660){ doc.addPage(); y = 50; }
   line('Subtotal', formatMoneyPdf(totals.subtotal, q.currency));
@@ -1264,17 +1265,17 @@ function buildPdf(q, settings, logo){
   // rule sitting under the text) so nothing overlaps the label or amount, and
   // the total reads as clearly the most important number on the page.
   if(y > 700){ doc.addPage(); y = 50; }
-  const gtBoxX = totalsX - 10;
-  const gtBoxW = (pageW - margin) - gtBoxX;
-  const gtBoxH = 26;
+  const gtBoxX = totalsX;
+  const gtBoxW = totalsBoxW;
+  const gtBoxH = 24;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
-  doc.roundedRect(gtBoxX, y - 4, gtBoxW, gtBoxH, 3, 3, 'F');
+  doc.roundedRect(gtBoxX, y - 3, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(11.5);
-  doc.text('GRAND TOTAL', gtBoxX + 10, y + 14);
-  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 8, y + 14, { align:'right' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('GRAND TOTAL', gtBoxX + 10, y + 12);
+  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 10, y + 12, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  y += gtBoxH + 14;
+  y += gtBoxH + 12;
 
   const addTextBlock = (title, text) => {
     if(!text) return;
@@ -1347,24 +1348,26 @@ function buildPdf(q, settings, logo){
   const prepName = (preparedBy.name || settings.preparedByName || 'info@vssdigital.com').split('\n')[0];
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  doc.text(prepName, col1X, boxY+32);
+  doc.text(prepName, col1X, boxY+22);
+  let prepInfoY = boxY+22;
   if(preparedBy.designation || settings.preparedByDesignation){
     doc.setFontSize(7.5);
     doc.setTextColor(107,107,128);
-    doc.text(preparedBy.designation || settings.preparedByDesignation, col1X, boxY+41);
+    doc.text(preparedBy.designation || settings.preparedByDesignation, col1X, boxY+30);
+    prepInfoY = boxY+30;
   }
   if(preparedBy.email || settings.preparedByEmail){
     doc.setFontSize(7);
     doc.setTextColor(107,107,128);
-    doc.text(preparedBy.email || settings.preparedByEmail, col1X, boxY+48);
+    doc.text(preparedBy.email || settings.preparedByEmail, col1X, boxY+37);
+    prepInfoY = boxY+37;
   }
   doc.setDrawColor(180,175,200);
-  doc.line(col1X, boxY+60, col1X+colW2, boxY+60);
-  doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.line(col1X, boxY+72, col1X+colW2, boxY+72);
+  const signatureLineY = prepInfoY + 16;
+  doc.line(col1X, signatureLineY, col1X+colW2, signatureLineY);
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
   doc.setTextColor(107,107,128);
-  doc.text('AUTHORISED SIGNATURE', col1X, boxY+82);
+  doc.text('AUTHORISED SIGNATURE', col1X, signatureLineY+9);
 
   // Accepted By: blank fields for Name / Designation / Signature / Date
   const acceptFields = ['NAME','DESIGNATION','SIGNATURE','DATE'];
