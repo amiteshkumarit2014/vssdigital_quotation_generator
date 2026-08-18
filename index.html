@@ -1238,24 +1238,25 @@ function buildPdf(q, settings, logo){
   });
   y = doc.lastAutoTable.finalY + 14;
 
-  // Totals - aligned with table right edge, proper PDF positioning
+  // Totals section - fixed positioning for precise PDF alignment
   const totals = calcTotals(q);
-  const totalsBoxW = 200;
-  const totalsX = pageW - margin - totalsBoxW;
-  const labelMaxW = 100;  // Max width for labels
+  const totalsRightX = pageW - margin;        // Right edge position
+  const totalsLabelX = pageW - margin - 150;  // Fixed label start
+  const totalsValueX = pageW - margin - 45;   // Fixed value position for right-alignment
   
-  // Proper line rendering with fixed positions
+  // Line renderer with fixed X positions to prevent PDF misalignment
   const line = (label, value, bold) => {
     doc.setFont('helvetica', bold?'bold':'normal'); doc.setFontSize(9.5);
-    // Label: left-aligned within label area
-    doc.text(label, totalsX + 8, y, { align:'left', maxWidth: labelMaxW });
-    // Value: right-aligned to the totals box right edge
-    doc.text(value, pageW - margin - 8, y, { align:'right' });
+    doc.setTextColor(INK[0],INK[1],INK[2]);
+    // Label at fixed position, left-aligned
+    doc.text(label, totalsLabelX, y);
+    // Value at fixed position, right-aligned (will align to the right edge)
+    doc.text(value, totalsValueX, y, { align:'right' });
     y += 14;
   };
   
   if(y > 660){ doc.addPage(); y = 50; }
-  y += 4; // Add top padding before totals
+  y += 6; // Padding before totals
   line('Subtotal', formatMoneyPdf(totals.subtotal, q.currency));
   if(Number(q.overallDiscountPct)>0) line(`Overall Discount (${q.overallDiscountPct}%)`, '- '+formatMoneyPdf(totals.overallDiscount, q.currency));
   line('Taxable Amount', formatMoneyPdf(totals.taxable, q.currency));
@@ -1268,20 +1269,20 @@ function buildPdf(q, settings, logo){
     line('Tax', 'Not Applicable');
   }
 
-  // GRAND TOTAL — rendered as a solid, high-contrast banner
+  // GRAND TOTAL banner
   if(y > 700){ doc.addPage(); y = 50; }
-  y += 3; // Spacing before grand total box
-  const gtBoxX = totalsX;
-  const gtBoxW = totalsBoxW;
-  const gtBoxH = 26;
+  y += 6; // Spacing before grand total
+  const gtBoxX = totalsLabelX - 5;
+  const gtBoxW = 160;
+  const gtBoxH = 24;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
   doc.roundedRect(gtBoxX, y - 2, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('GRAND TOTAL', gtBoxX + 10, y + 13);
-  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 8, y + 13, { align:'right' });
+  doc.text('GRAND TOTAL', gtBoxX + 8, y + 11);
+  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), totalsValueX, y + 11, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  y += gtBoxH + 12;
+  y += gtBoxH + 14;
 
   const addTextBlock = (title, text) => {
     if(!text) return;
@@ -1316,85 +1317,109 @@ function buildPdf(q, settings, logo){
   addTextBlock('PAYMENT TERMS', q.terms.paymentTerms);
   addTextBlock('TERMS & CONDITIONS', q.terms.termsAndConditions);
 
-  // ACCEPTANCE / SIGNATURE BLOCK - Improved layout
-  const acceptBoxH = 100;
-  if(y + 18 + acceptBoxH > 740){ doc.addPage(); y = 50; }
+  // ACCEPTANCE STATEMENT
+  if(y + 40 > 740){ doc.addPage(); y = 50; }
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
   doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
   doc.text('ACCEPTANCE', margin, y);
   doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.setLineWidth(1.2);
-  doc.line(margin, y+3, margin+52, y+3);
+  doc.setLineWidth(1);
+  doc.line(margin, y+3, margin+50, y+3);
   doc.setLineWidth(0.5);
-  y += 18;
+  y += 14;
 
-  doc.setDrawColor(120,120,130);
-  doc.rect(margin, y-7, 8, 8);
+  doc.setDrawColor(140,82,255);
+  doc.rect(margin, y-4, 6, 6);
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text('I accept this quotation and the associated terms and conditions.', margin+14, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text('I accept this quotation and the associated terms and conditions.', margin+12, y);
   y += 18;
 
-  const boxX = margin, boxY = y, boxW = pageW-2*margin, boxH = acceptBoxH;
-  doc.setFillColor(246,245,250);
-  doc.setDrawColor(227,223,240);
-  doc.roundedRect(boxX, boxY, boxW, boxH, 4, 4, 'FD');
-
-  // Improved column layout with better spacing
-  const gap = 20;
-  const colW2 = (boxW - 28 - gap) / 2;
-  const col1X = boxX + 14, col2X = boxX + 14 + colW2 + gap;
-
-  // Section headers
-  doc.setFont('helvetica','bold'); doc.setFontSize(9);
-  doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.text('PREPARED BY', col1X, boxY+16);
-  doc.text('ACCEPTED BY', col2X, boxY+16);
-
-  // Prepared By: show details if available
+  // SIGNATURE BLOCK - Professional, clean design
+  const sigBoxY = y;
+  const sigBoxH = 94;
+  if(sigBoxY + sigBoxH > 750){ doc.addPage(); y = 50; }
+  
+  // No background box - cleaner modern look
+  // Just top border line
+  doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
+  doc.setLineWidth(0.8);
+  doc.line(margin, sigBoxY, pageW - margin, sigBoxY);
+  
+  // Column dimensions
+  const sigColW = (pageW - 2*margin - 1) / 2;  // Divide page into 2 columns with thin divider
+  const dividerX = margin + sigColW + 0.5;
+  
+  // LEFT COLUMN: PREPARED BY
+  const prepX = margin + 8;
   const preparedBy = q.preparedBy || {};
   const prepName = (preparedBy.name || settings.preparedByName || 'info@vssdigital.com').split('\n')[0];
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.setTextColor(INK[0],INK[1],INK[2]);
-  doc.text(prepName, col1X, boxY+28);
-  let prepInfoY = boxY+28;
   
+  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
+  doc.text('PREPARED BY', prepX, sigBoxY + 10);
+  
+  // Prepared By details
+  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.setTextColor(INK[0],INK[1],INK[2]);
+  doc.text(prepName, prepX, sigBoxY + 24);
+  
+  let prepDetailY = sigBoxY + 24;
   if(preparedBy.designation || settings.preparedByDesignation){
-    doc.setFontSize(7.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
     doc.setTextColor(107,107,128);
-    doc.text(preparedBy.designation || settings.preparedByDesignation, col1X, boxY+36);
-    prepInfoY = boxY+36;
+    doc.text(preparedBy.designation || settings.preparedByDesignation, prepX, sigBoxY + 32);
+    prepDetailY = sigBoxY + 32;
   }
   
   if(preparedBy.email || settings.preparedByEmail){
-    doc.setFontSize(7);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
     doc.setTextColor(107,107,128);
-    doc.text(preparedBy.email || settings.preparedByEmail, col1X, boxY+43);
-    prepInfoY = boxY+43;
+    doc.text(preparedBy.email || settings.preparedByEmail, prepX, sigBoxY + 39);
+    prepDetailY = sigBoxY + 39;
   }
   
-  doc.setDrawColor(180,175,200);
-  const signatureLineY = prepInfoY + 14;
-  doc.setLineWidth(0.5);
-  doc.line(col1X, signatureLineY, col1X+colW2-4, signatureLineY);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-  doc.setTextColor(107,107,128);
-  doc.text('AUTHORISED SIGNATURE', col1X, signatureLineY+8);
-
-  // Accepted By: blank fields for Name / Designation / Signature / Date - improved spacing
-  const acceptFields = ['NAME','DESIGNATION','SIGNATURE','DATE'];
-  let fy = boxY + 28;
-  const fieldSpacing = 16;
+  // Signature line
+  const prepSigLineY = prepDetailY + 14;
+  doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
+  doc.setLineWidth(0.8);
+  doc.line(prepX, prepSigLineY, prepX + sigColW - 16, prepSigLineY);
   
-  acceptFields.forEach(lbl=>{
-    doc.setDrawColor(200,195,215);
-    doc.setLineWidth(0.5);
-    doc.line(col2X, fy, col2X+colW2-4, fy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.setTextColor(107,107,128);
+  doc.text('Signature', prepX, prepSigLineY + 7);
+  
+  // RIGHT COLUMN: ACCEPTED BY
+  const acceptX = dividerX + 8;
+  
+  // Vertical divider
+  doc.setDrawColor(BRAND_400[0],BRAND_400[1],BRAND_400[2]);
+  doc.setLineWidth(0.5);
+  doc.line(dividerX, sigBoxY + 2, dividerX, sigBoxY + sigBoxH - 2);
+  
+  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
+  doc.text('ACCEPTED BY', acceptX, sigBoxY + 10);
+  
+  // Accepted By fields
+  const acceptLines = [
+    { label: 'Name', y: sigBoxY + 24 },
+    { label: 'Designation', y: sigBoxY + 37 },
+    { label: 'Signature', y: sigBoxY + 50 },
+    { label: 'Date', y: sigBoxY + 63 }
+  ];
+  
+  acceptLines.forEach(item => {
+    doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
+    doc.setLineWidth(0.8);
+    doc.line(acceptX, item.y, acceptX + sigColW - 16, item.y);
+    
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
     doc.setTextColor(107,107,128);
-    doc.text(lbl, col2X, fy+8);
-    fy += fieldSpacing;
+    doc.text(item.label, acceptX, item.y + 7);
   });
+  
+  y = sigBoxY + sigBoxH + 8;
 
   doc.setTextColor(INK[0],INK[1],INK[2]);
   y = boxY + boxH + 20;
