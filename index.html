@@ -1510,7 +1510,15 @@ function PreviewStep({ q, settings, onDownloadPdf }){
             <div>
               <div className="font-semibold text-xs uppercase tracking-wide text-[var(--muted)] mb-4">Prepared By</div>
               <div className="border-b-2 pb-1 mb-1 h-5" style={{borderColor:'var(--indigo)'}}></div>
-              <div className="mb-2">{q.preparedBy?.name || settings.preparedByName ? (<><div className="text-sm font-medium">{q.preparedBy?.name || settings.preparedByName}</div>{(q.preparedBy?.designation || settings.preparedByDesignation) && <div className="text-xs text-[var(--muted)]">{q.preparedBy?.designation || settings.preparedByDesignation}</div>}{(q.preparedBy?.email || settings.preparedByEmail) && <div className="text-xs">{q.preparedBy?.email || settings.preparedByEmail}</div></>) : <div className="text-xs">{settings.email}</div>}</div>
+              {(q.preparedBy?.name || settings.preparedByName) ? (
+                <div className="mb-2">
+                  <div className="text-sm font-medium">{q.preparedBy?.name || settings.preparedByName}</div>
+                  {(q.preparedBy?.designation || settings.preparedByDesignation) && <div className="text-xs text-[var(--muted)]">{q.preparedBy?.designation || settings.preparedByDesignation}</div>}
+                  {(q.preparedBy?.email || settings.preparedByEmail) && <div className="text-xs">{q.preparedBy?.email || settings.preparedByEmail}</div>}
+                </div>
+              ) : (
+                <div className="mb-2 text-xs">{settings.email}</div>
+              )}
               <div className="border-t border-[var(--line-2)] mt-2 pt-1 text-[10px] uppercase tracking-wide text-[var(--muted)]">Authorised Signature</div>
             </div>
             <div>
