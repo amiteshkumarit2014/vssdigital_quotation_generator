@@ -1265,14 +1265,14 @@ function buildPdf(q, settings, logo){
   // the total reads as clearly the most important number on the page.
   if(y > 700){ doc.addPage(); y = 50; }
   const gtBoxX = totalsX - 10;
-  const gtBoxW = (pageW - margin) - gtBoxX;
+  const gtBoxW = (pageW - margin - 12) - gtBoxX;
   const gtBoxH = 26;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
   doc.roundedRect(gtBoxX, y - 4, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(11.5);
   doc.text('GRAND TOTAL', gtBoxX + 10, y + 14);
-  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 8, y + 14, { align:'right' });
+  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 12, y + 14, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
   y += gtBoxH + 14;
 
@@ -1310,7 +1310,7 @@ function buildPdf(q, settings, logo){
   addTextBlock('TERMS & CONDITIONS', q.terms.termsAndConditions);
 
   // ACCEPTANCE / SIGNATURE BLOCK
-  const acceptBoxH = 96;
+  const acceptBoxH = 80;
   if(y + 18 + acceptBoxH > 740){ doc.addPage(); y = 50; }
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
   doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
@@ -1343,25 +1343,12 @@ function buildPdf(q, settings, logo){
   doc.text('PREPARED BY', col1X, boxY+12);
   doc.text('ACCEPTED BY', col2X, boxY+12);
 
-  // Prepared By: show details if available
+  // Prepared By: simplified - just show name
   const preparedBy = q.preparedBy || {};
-  const prepName = (preparedBy.name || settings.preparedByName || 'info@vssdigital.com').split('\n')[0];
+  const prepName = (preparedBy.name || settings.preparedByName || 'Account Manager').split('\n')[0];
   doc.setFont('helvetica','normal'); doc.setFontSize(8);
   doc.setTextColor(INK[0],INK[1],INK[2]);
   doc.text(prepName, col1X, boxY+28);
-  
-  let prepY = boxY + 28;
-  if(preparedBy.designation || settings.preparedByDesignation){
-    doc.setFontSize(7);
-    doc.setTextColor(107,107,128);
-    doc.text(preparedBy.designation || settings.preparedByDesignation, col1X, prepY+8);
-    prepY = boxY + 36;
-  }
-  if(preparedBy.email || settings.preparedByEmail){
-    doc.setFontSize(7);
-    doc.setTextColor(107,107,128);
-    doc.text(preparedBy.email || settings.preparedByEmail, col1X, prepY+8);
-  }
   
   // Prepared By signature lines
   doc.setDrawColor(180,175,200);
@@ -1372,12 +1359,11 @@ function buildPdf(q, settings, logo){
   doc.setTextColor(107,107,128);
   doc.text('AUTHORISED SIGNATURE', col1X, boxY+76);
 
-  // Accepted By: blank fields aligned with Prepared By
+  // Accepted By: blank fields for signature (simplified to match Prepared By)
   const acceptFields = [
     {lbl:'NAME', lineY:boxY+28},
-    {lbl:'DESIGNATION', lineY:boxY+40},
-    {lbl:'SIGNATURE', lineY:boxY+52},
-    {lbl:'DATE', lineY:boxY+64}
+    {lbl:'SIGNATURE', lineY:boxY+54},
+    {lbl:'DATE', lineY:boxY+66}
   ];
   acceptFields.forEach(field=>{
     doc.setDrawColor(200,195,215);
