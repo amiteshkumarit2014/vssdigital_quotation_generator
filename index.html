@@ -1343,26 +1343,36 @@ function buildPdf(q, settings, logo){
   doc.text('PREPARED BY', col1X, boxY+12);
   doc.text('ACCEPTED BY', col2X, boxY+12);
 
-  // Prepared By: simplified - just show name
+  // Prepared By: name field with label
   const preparedBy = q.preparedBy || {};
   const prepName = (preparedBy.name || settings.preparedByName || 'Account Manager').split('\n')[0];
-  doc.setFont('helvetica','normal'); doc.setFontSize(8);
-  doc.setTextColor(INK[0],INK[1],INK[2]);
-  doc.text(prepName, col1X, boxY+28);
-  
-  // Prepared By signature lines
   doc.setDrawColor(180,175,200);
-  doc.line(col1X, boxY+54, col1X+colW2, boxY+54);
-  doc.setDrawColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.line(col1X, boxY+66, col1X+colW2, boxY+66);
+  doc.line(col1X, boxY+28, col1X+colW2, boxY+28);
   doc.setFont('helvetica','normal'); doc.setFontSize(7);
   doc.setTextColor(107,107,128);
-  doc.text('AUTHORISED SIGNATURE', col1X, boxY+76);
+  doc.text('NAME', col1X, boxY+36);
+  
+  // Prepared By: signature line
+  doc.setDrawColor(180,175,200);
+  doc.line(col1X, boxY+50, col1X+colW2, boxY+50);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text('SIGNATURE', col1X, boxY+58);
+  
+  // Prepared By: date line
+  doc.setDrawColor(180,175,200);
+  doc.line(col1X, boxY+66, col1X+colW2, boxY+66);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text('DATE', col1X, boxY+74);
 
-  // Accepted By: blank fields for signature (simplified to match Prepared By)
+  // Show actual name above the NAME line
+  doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.setTextColor(INK[0],INK[1],INK[2]);
+  doc.text(prepName, col1X, boxY+24);
+
+  // Accepted By: blank fields matching Prepared By structure
   const acceptFields = [
     {lbl:'NAME', lineY:boxY+28},
-    {lbl:'SIGNATURE', lineY:boxY+54},
+    {lbl:'SIGNATURE', lineY:boxY+50},
     {lbl:'DATE', lineY:boxY+66}
   ];
   acceptFields.forEach(field=>{
