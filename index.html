@@ -1113,62 +1113,28 @@ function ScopeStep({ q, update }){
 function addWatermark(doc, logo, pageCount){
   if(!logo || !logo.dataUrl) return;
   
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  
   try{
-    // Create a light watermark by processing the image
-    // Use a canvas to create a faded version of the logo
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
     
-    // Set canvas size
-    canvas.width = 400;
-    canvas.height = Math.round(400 * (logo.height / logo.width));
+    // Watermark dimensions - subtle and centered
+    const watermarkW = 280;
+    const watermarkH = Math.round(280 * (logo.height / logo.width));
+    const watermarkX = (pageW - watermarkW) / 2;
+    const watermarkY = (pageH - watermarkH) / 2;
     
-    // Create an image element
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    
-    // Function to draw watermark on canvas with reduced opacity
-    const drawWatermark = () => {
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw image with low opacity
-      ctx.globalAlpha = 0.1; // Very subtle watermark
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      // Convert canvas to image data URL
-      const watermarkDataUrl = canvas.toDataURL('image/png');
-      
-      // Add watermark to each page
-      const watermarkW = 280;
-      const watermarkH = Math.round(280 * (logo.height / logo.width));
-      const watermarkX = (pageW - watermarkW) / 2;
-      const watermarkY = (pageH - watermarkH) / 2;
-      
-      for(let i = 1; i <= pageCount; i++){
-        doc.setPage(i);
-        try{
-          doc.addImage(watermarkDataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
-        } catch(err){
-          console.warn('Error adding watermark to page ' + i);
-        }
+    // Add watermark to each page (opacity handled by image itself)
+    for(let i = 1; i <= pageCount; i++){
+      doc.setPage(i);
+      try{
+        // Add image with transparency - jsPDF renders at page opacity
+        doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
+      } catch(err){
+        // Silently fail if watermark can't be added
       }
-    };
-    
-    // Load image and draw watermark
-    img.onload = drawWatermark;
-    img.onerror = () => { console.warn('Could not load logo for watermark'); };
-    img.src = logo.dataUrl;
-    
-    // If image is cached/already loaded
-    if(img.complete && img.naturalHeight !== 0) {
-      drawWatermark();
     }
   } catch(err){
-    console.warn('Watermark function error:', err);
+    // Silently handle errors - watermark is optional
   }
 }
 
