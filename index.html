@@ -1125,14 +1125,14 @@ function addWatermarkToAllPages(doc, logo){
     
     const pageCount = doc.internal.getNumberOfPages();
     
-    // Add watermark to EACH page with very low opacity (3%)
+    // Add watermark to EACH page with very low opacity (10%)
     for(let i = 1; i <= pageCount; i++){
       doc.setPage(i);
       
       try{
         // Try using GState for proper opacity control
         if(doc.GState){
-          const watermarkGState = new doc.GState({ opacity: 0.03 });
+          const watermarkGState = new doc.GState({ opacity: 0.10 });
           doc.setGState(watermarkGState);
           doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
           const normalGState = new doc.GState({ opacity: 1 });
