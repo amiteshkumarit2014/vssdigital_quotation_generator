@@ -1118,8 +1118,8 @@ function addWatermarkToAllPages(doc, logo){
     const pageH = doc.internal.pageSize.getHeight();
     
     // Watermark dimensions - subtle and centered
-    const watermarkW = 150;
-    const watermarkH = Math.round(150 * (logo.height / logo.width));
+    const watermarkW = 300;
+    const watermarkH = Math.round(300 * (logo.height / logo.width));
     const watermarkX = (pageW - watermarkW) / 2;
     const watermarkY = (pageH - watermarkH) / 2 + 60;
     
@@ -1310,14 +1310,14 @@ function buildPdf(q, settings, logo){
   y += 6;
   if(y > 700){ doc.addPage(); y = 50; }
   const gtBoxX = totalsX - 10;
-  const gtBoxW = (pageW - margin - 8) - gtBoxX;
+  const gtBoxW = (pageW - margin) - gtBoxX;
   const gtBoxH = 26;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
   doc.roundedRect(gtBoxX, y - 4, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(11.5);
-  doc.text('GRAND TOTAL', gtBoxX + 10, y + 14);
-  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 8, y + 14, { align:'right' });
+  doc.text('GRAND TOTAL', gtBoxX + 12, y + 14);
+  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 12, y + 14, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
   y += gtBoxH + 14;
 
