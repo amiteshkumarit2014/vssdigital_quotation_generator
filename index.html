@@ -1949,13 +1949,13 @@ function Dashboard({ quotations, setView, openQuotation, newQuotation, currency 
           <button onClick={newQuotation} className="px-4 py-2 text-sm rounded text-white font-semibold" style={{background:'var(--indigo)'}}>+ New Quotation</button>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-4 mb-4">
+      <div className="mb-4" style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem'}}>
         <StatCard label="Total Quotations" value={stats.total} />
         <StatCard label="Draft" value={stats.Draft||0} />
         <StatCard label="Sent" value={stats.Sent||0} accent="#5E17EB" />
         <StatCard label="Accepted" value={stats.Accepted||0} accent="#0F766E" />
       </div>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="mb-6" style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem'}}>
         <StatCard label="Rejected" value={stats.Rejected||0} accent="#B91C1C" />
         <StatCard label="This Month" value={stats.thisMonth} />
         <StatCard label="Total Quotation Value" value={formatMoney(stats.value, currency||'INR')} accent="#301266" />
