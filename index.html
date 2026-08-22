@@ -1108,7 +1108,72 @@ function ScopeStep({ q, update }){
 
 /* ============================== PDF GENERATION ============================== */
 
-function buildPdf(q, settings, logo){
+/* ============================== PDF WATERMARK ============================== */
+
+function addWatermark(doc, logo, pageCount){
+  if(!logo || !logo.dataUrl) return;
+  
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  
+  try{
+    // Create a light watermark by processing the image
+    // Use a canvas to create a faded version of the logo
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = Math.round(400 * (logo.height / logo.width));
+    
+    // Create an image element
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    
+    // Function to draw watermark on canvas with reduced opacity
+    const drawWatermark = () => {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw image with low opacity
+      ctx.globalAlpha = 0.1; // Very subtle watermark
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // Convert canvas to image data URL
+      const watermarkDataUrl = canvas.toDataURL('image/png');
+      
+      // Add watermark to each page
+      const watermarkW = 280;
+      const watermarkH = Math.round(280 * (logo.height / logo.width));
+      const watermarkX = (pageW - watermarkW) / 2;
+      const watermarkY = (pageH - watermarkH) / 2;
+      
+      for(let i = 1; i <= pageCount; i++){
+        doc.setPage(i);
+        try{
+          doc.addImage(watermarkDataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
+        } catch(err){
+          console.warn('Error adding watermark to page ' + i);
+        }
+      }
+    };
+    
+    // Load image and draw watermark
+    img.onload = drawWatermark;
+    img.onerror = () => { console.warn('Could not load logo for watermark'); };
+    img.src = logo.dataUrl;
+    
+    // If image is cached/already loaded
+    if(img.complete && img.naturalHeight !== 0) {
+      drawWatermark();
+    }
+  } catch(err){
+    console.warn('Watermark function error:', err);
+  }
+}
+
+/* ============================== PDF BUILDER ============================== */
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -1226,15 +1291,15 @@ function buildPdf(q, settings, logo){
     body: rows,
     margin: { left: margin, right: margin },
     tableWidth: tableW,
-    styles: { font:'helvetica', fontSize: 8.5, cellPadding: 6, valign:'top', overflow:'linebreak' },
-    headStyles: { fillColor: BRAND_900, textColor:255, fontStyle:'bold' },
+    styles: { font:'helvetica', fontSize: 8.5, cellPadding: 6, valign:'top', overflow:'linebreak', halign:'left' },
+    headStyles: { fillColor: BRAND_900, textColor:255, fontStyle:'bold', halign:'left' },
     columnStyles: {
-      0:{ cellWidth: 150 },
-      1:{ cellWidth: 70 },
-      2:{ cellWidth: 55, halign:'center' },
-      3:{ cellWidth: 75, halign:'right' },
-      4:{ cellWidth: 55, halign:'right' },
-      5:{ cellWidth: 90, halign:'right' }
+      0:{ cellWidth: 148, halign:'left' },
+      1:{ cellWidth: 68, halign:'center' },
+      2:{ cellWidth: 56, halign:'center' },
+      3:{ cellWidth: 76, halign:'right' },
+      4:{ cellWidth: 56, halign:'center' },
+      5:{ cellWidth: 88, halign:'right' }
     },
     alternateRowStyles: { fillColor:[247,244,252] }
   });
@@ -1247,7 +1312,7 @@ function buildPdf(q, settings, logo){
     doc.setFont('helvetica', bold?'bold':'normal'); doc.setFontSize(9.5);
     doc.text(label, totalsX, y);
     doc.text(value, pageW-margin, y, { align:'right' });
-    y += 15;
+    y += 14;
   };
   if(y > 660){ doc.addPage(); y = 50; }
   line('Subtotal', formatMoneyPdf(totals.subtotal, q.currency));
@@ -1262,19 +1327,18 @@ function buildPdf(q, settings, logo){
     line('Tax', 'Not Applicable');
   }
 
-  // GRAND TOTAL — rendered as a solid, high-contrast banner (instead of a thin
-  // rule sitting under the text) so nothing overlaps the label or amount, and
-  // the total reads as clearly the most important number on the page.
+  // GRAND TOTAL — rendered as a solid, high-contrast banner
+  y += 6;
   if(y > 700){ doc.addPage(); y = 50; }
   const gtBoxX = totalsX - 10;
-  const gtBoxW = (pageW - margin - 12) - gtBoxX;
+  const gtBoxW = (pageW - margin - 8) - gtBoxX;
   const gtBoxH = 26;
   doc.setFillColor(BRAND_900[0],BRAND_900[1],BRAND_900[2]);
   doc.roundedRect(gtBoxX, y - 4, gtBoxW, gtBoxH, 3, 3, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(11.5);
   doc.text('GRAND TOTAL', gtBoxX + 10, y + 14);
-  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 12, y + 14, { align:'right' });
+  doc.text(formatMoneyPdf(totals.grandTotal, q.currency), pageW - margin - 8, y + 14, { align:'right' });
   doc.setTextColor(INK[0],INK[1],INK[2]);
   y += gtBoxH + 14;
 
@@ -1312,7 +1376,7 @@ function buildPdf(q, settings, logo){
   addTextBlock('TERMS & CONDITIONS', q.terms.termsAndConditions);
 
   // ACCEPTANCE / SIGNATURE BLOCK
-  const acceptBoxH = 80;
+  const acceptBoxH = 88;
   if(y + 18 + acceptBoxH > 740){ doc.addPage(); y = 50; }
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
   doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
@@ -1324,65 +1388,75 @@ function buildPdf(q, settings, logo){
   y += 18;
 
   doc.setDrawColor(120,120,130);
-  doc.rect(margin, y-7, 8, 8);
+  doc.rect(margin, y-8, 8, 8);
   doc.setTextColor(INK[0],INK[1],INK[2]);
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   doc.text('I accept this quotation and the associated terms and conditions.', margin+14, y);
-  y += 18;
+  y += 20;
 
   const boxX = margin, boxY = y, boxW = pageW-2*margin, boxH = acceptBoxH;
   doc.setFillColor(246,245,250);
   doc.setDrawColor(227,223,240);
   doc.roundedRect(boxX, boxY, boxW, boxH, 4, 4, 'FD');
 
-  const gap = 24;
-  const colW2 = (boxW - 28 - gap) / 2;
-  const col1X = boxX + 14, col2X = boxX + 14 + colW2 + gap;
+  const acceptGap = 20;
+  const acceptColW = (boxW - 28 - acceptGap) / 2;
+  const acceptCol1X = boxX + 14, acceptCol2X = boxX + 14 + acceptColW + acceptGap;
 
   // Section headers - aligned at top
   doc.setFont('helvetica','bold'); doc.setFontSize(9);
   doc.setTextColor(BRAND_600[0],BRAND_600[1],BRAND_600[2]);
-  doc.text('PREPARED BY', col1X, boxY+12);
-  doc.text('ACCEPTED BY', col2X, boxY+12);
+  doc.text('PREPARED BY', acceptCol1X, boxY+10);
+  doc.text('ACCEPTED BY', acceptCol2X, boxY+10);
 
-  // Prepared By: name field with label
+  // Field positioning - consistent spacing between lines
+  const fieldY1 = boxY + 22;  // NAME line
+  const fieldY2 = boxY + 42;  // SIGNATURE line
+  const fieldY3 = boxY + 62;  // DATE line
+  const labelOffsetY = 6;     // Label below the line
+
+  // Prepared By fields
   const preparedBy = q.preparedBy || {};
   const prepName = (preparedBy.name || settings.preparedByName || 'Account Manager').split('\n')[0];
+  
+  // NAME field
   doc.setDrawColor(180,175,200);
-  doc.line(col1X, boxY+28, col1X+colW2, boxY+28);
+  doc.line(acceptCol1X, fieldY1, acceptCol1X+acceptColW, fieldY1);
   doc.setFont('helvetica','normal'); doc.setFontSize(7);
   doc.setTextColor(107,107,128);
-  doc.text('NAME', col1X, boxY+36);
+  doc.text('NAME', acceptCol1X, fieldY1+labelOffsetY);
   
-  // Prepared By: signature line
-  doc.setDrawColor(180,175,200);
-  doc.line(col1X, boxY+50, col1X+colW2, boxY+50);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7);
-  doc.text('SIGNATURE', col1X, boxY+58);
-  
-  // Prepared By: date line
-  doc.setDrawColor(180,175,200);
-  doc.line(col1X, boxY+66, col1X+colW2, boxY+66);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7);
-  doc.text('DATE', col1X, boxY+74);
-
-  // Show actual name above the NAME line
+  // Show actual name in prepared by
   doc.setFont('helvetica','normal'); doc.setFontSize(8);
   doc.setTextColor(INK[0],INK[1],INK[2]);
-  doc.text(prepName, col1X, boxY+24);
+  doc.text(prepName, acceptCol1X, fieldY1-6);
+  
+  // SIGNATURE field
+  doc.setDrawColor(180,175,200);
+  doc.line(acceptCol1X, fieldY2, acceptCol1X+acceptColW, fieldY2);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.setTextColor(107,107,128);
+  doc.text('SIGNATURE', acceptCol1X, fieldY2+labelOffsetY);
+  
+  // DATE field
+  doc.setDrawColor(180,175,200);
+  doc.line(acceptCol1X, fieldY3, acceptCol1X+acceptColW, fieldY3);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.setTextColor(107,107,128);
+  doc.text('DATE', acceptCol1X, fieldY3+labelOffsetY);
 
   // Accepted By: blank fields matching Prepared By structure
-  const acceptFields = [
-    {lbl:'NAME', lineY:boxY+28},
-    {lbl:'SIGNATURE', lineY:boxY+50},
-    {lbl:'DATE', lineY:boxY+66}
+  const acceptFieldPositions = [
+    {lbl:'NAME', lineY:fieldY1},
+    {lbl:'SIGNATURE', lineY:fieldY2},
+    {lbl:'DATE', lineY:fieldY3}
   ];
-  acceptFields.forEach(field=>{
+  acceptFieldPositions.forEach(field=>{
     doc.setDrawColor(200,195,215);
-    doc.line(col2X, field.lineY, col2X+colW2, field.lineY);
+    doc.line(acceptCol2X, field.lineY, acceptCol2X+acceptColW, field.lineY);
     doc.setFont('helvetica','normal'); doc.setFontSize(7);
     doc.setTextColor(107,107,128);
-    doc.text(field.lbl, col2X, field.lineY+8);
+    doc.text(field.lbl, acceptCol2X, field.lineY+labelOffsetY);
   });
 
   doc.setTextColor(INK[0],INK[1],INK[2]);
@@ -1398,6 +1472,13 @@ function buildPdf(q, settings, logo){
     doc.text(`${settings.companyName} - ${settings.email} - ${settings.phone}`, margin, h-26);
     doc.text(`Page ${i} of ${pageCount}`, pageW-margin, h-26, { align:'right' });
     doc.setTextColor(INK[0],INK[1],INK[2]);
+  }
+
+  // Add watermark on all pages (after all content is rendered)
+  try{
+    addWatermark(doc, logo, doc.internal.getNumberOfPages());
+  } catch(err){
+    console.warn('Error adding watermark:', err);
   }
 
   return doc;
