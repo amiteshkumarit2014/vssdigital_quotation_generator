@@ -1140,6 +1140,7 @@ function addWatermark(doc, logo, pageCount){
 
 /* ============================== PDF BUILDER ============================== */
 
+function buildPdf(q, settings, logo){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4' });
   const pageW = doc.internal.pageSize.getWidth();
