@@ -1110,7 +1110,7 @@ function ScopeStep({ q, update }){
 
 /* ============================== PDF WATERMARK ============================== */
 
-function addWatermark(doc, logo, pageCount){
+function addWatermarkBehind(doc, logo){
   if(!logo || !logo.dataUrl) return;
   
   try{
@@ -1118,20 +1118,21 @@ function addWatermark(doc, logo, pageCount){
     const pageH = doc.internal.pageSize.getHeight();
     
     // Watermark dimensions - subtle and centered
-    const watermarkW = 280;
-    const watermarkH = Math.round(280 * (logo.height / logo.width));
+    const watermarkW = 200;
+    const watermarkH = Math.round(200 * (logo.height / logo.width));
     const watermarkX = (pageW - watermarkW) / 2;
-    const watermarkY = (pageH - watermarkH) / 2;
+    const watermarkY = (pageH - watermarkH) / 2 + 50;
     
-    // Add watermark to each page (opacity handled by image itself)
-    for(let i = 1; i <= pageCount; i++){
-      doc.setPage(i);
-      try{
-        // Add image with transparency - jsPDF renders at page opacity
-        doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
-      } catch(err){
-        // Silently fail if watermark can't be added
-      }
+    // Add image with opacity effect using jsPDF's global state
+    try{
+      // Create a new page state with opacity for watermark
+      const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
+      doc.setOpacity(0.08);
+      doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
+      doc.setOpacity(1);
+    } catch(err){
+      // If setOpacity not available, try adding without opacity
+      doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
     }
   } catch(err){
     // Silently handle errors - watermark is optional
@@ -1146,6 +1147,13 @@ function buildPdf(q, settings, logo){
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 40;
   let y = 0;
+
+  // Add watermark at the very beginning (behind all content)
+  try{
+    addWatermarkBehind(doc, logo);
+  } catch(err){
+    console.warn('Error adding watermark:', err);
+  }
 
   // Brand colours (VSS Digital)
   const BRAND_900 = [48,18,102];   // #301266
@@ -1439,13 +1447,6 @@ function buildPdf(q, settings, logo){
     doc.text(`${settings.companyName} - ${settings.email} - ${settings.phone}`, margin, h-26);
     doc.text(`Page ${i} of ${pageCount}`, pageW-margin, h-26, { align:'right' });
     doc.setTextColor(INK[0],INK[1],INK[2]);
-  }
-
-  // Add watermark on all pages (after all content is rendered)
-  try{
-    addWatermark(doc, logo, doc.internal.getNumberOfPages());
-  } catch(err){
-    console.warn('Error adding watermark:', err);
   }
 
   return doc;
