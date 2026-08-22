@@ -1110,7 +1110,7 @@ function ScopeStep({ q, update }){
 
 /* ============================== PDF WATERMARK ============================== */
 
-function addWatermarkBehind(doc, logo){
+function addWatermarkToAllPages(doc, logo){
   if(!logo || !logo.dataUrl) return;
   
   try{
@@ -1118,21 +1118,32 @@ function addWatermarkBehind(doc, logo){
     const pageH = doc.internal.pageSize.getHeight();
     
     // Watermark dimensions - subtle and centered
-    const watermarkW = 200;
-    const watermarkH = Math.round(200 * (logo.height / logo.width));
+    const watermarkW = 150;
+    const watermarkH = Math.round(150 * (logo.height / logo.width));
     const watermarkX = (pageW - watermarkW) / 2;
-    const watermarkY = (pageH - watermarkH) / 2 + 50;
+    const watermarkY = (pageH - watermarkH) / 2 + 60;
     
-    // Add image with opacity effect using jsPDF's global state
-    try{
-      // Create a new page state with opacity for watermark
-      const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
-      doc.setOpacity(0.08);
-      doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
-      doc.setOpacity(1);
-    } catch(err){
-      // If setOpacity not available, try adding without opacity
-      doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
+    const pageCount = doc.internal.getNumberOfPages();
+    
+    // Add watermark to EACH page with very low opacity (3%)
+    for(let i = 1; i <= pageCount; i++){
+      doc.setPage(i);
+      
+      try{
+        // Try using GState for proper opacity control
+        if(doc.GState){
+          const watermarkGState = new doc.GState({ opacity: 0.03 });
+          doc.setGState(watermarkGState);
+          doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
+          const normalGState = new doc.GState({ opacity: 1 });
+          doc.setGState(normalGState);
+        } else {
+          // Fallback without opacity control
+          doc.addImage(logo.dataUrl, 'PNG', watermarkX, watermarkY, watermarkW, watermarkH);
+        }
+      } catch(err){
+        // Silently fail if watermark can't be added on this page
+      }
     }
   } catch(err){
     // Silently handle errors - watermark is optional
@@ -1147,13 +1158,6 @@ function buildPdf(q, settings, logo){
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 40;
   let y = 0;
-
-  // Add watermark at the very beginning (behind all content)
-  try{
-    addWatermarkBehind(doc, logo);
-  } catch(err){
-    console.warn('Error adding watermark:', err);
-  }
 
   // Brand colours (VSS Digital)
   const BRAND_900 = [48,18,102];   // #301266
@@ -1447,6 +1451,13 @@ function buildPdf(q, settings, logo){
     doc.text(`${settings.companyName} - ${settings.email} - ${settings.phone}`, margin, h-26);
     doc.text(`Page ${i} of ${pageCount}`, pageW-margin, h-26, { align:'right' });
     doc.setTextColor(INK[0],INK[1],INK[2]);
+  }
+
+  // Add watermark to all pages (after all content including tables is rendered)
+  try{
+    addWatermarkToAllPages(doc, logo);
+  } catch(err){
+    console.warn('Error adding watermark:', err);
   }
 
   return doc;
